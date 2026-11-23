@@ -259,10 +259,58 @@ function argoHesapla(w) {
   }
   return null;
 }
+/* Fiil çekimi: sözlükte fiiller mastar hâlinde (yapmak). "yapılır", "okurken", "gidiyorlar" gibi çekimleri köke indirir. */
+const dort = (on, son) => ["ı","i","u","ü"].map(u => on + u + son.replace(/ı/g, u).replace(/a/g, "iü".includes(u) ? "e" : "a"));
+const iki = (on, son) => ["a","e"].map(u => on + u + (u === "e" ? son.replace(/a/g, "e").replace(/ı/g, "i") : son));
+const FIIL_EK = [...new Set([
+  // zaman ve kip
+  ...dort("", "yor"), "yor", ...iki("", "cak"), ...iki("y", "cak"), ...iki("", "cağ"), ...iki("y", "cağ"),
+  ...dort("", "r"), ...iki("", "r"), "r", "maz", "mez", ...dort("d", ""), ...dort("t", ""), ...dort("yd", ""),
+  ...dort("m", "ş"), ...dort("ym", "ş"), "malı", "meli", ...iki("s", ""), ...iki("ys", ""), ...iki("m", ""), ...iki("y", ""), ...dort("m", ""),
+  // zarf-fiil, sıfat-fiil, isim-fiil
+  "ken", "yken", ...dort("", "nca").map(x => x.replace(/^([iü])nca$/, "$1nce")), ...dort("y", "nca").map(x => x.replace(/^y([iü])nca$/, "y$1nce")),
+  ...dort("", "p"), ...dort("y", "p"), "arak", "erek", "yarak", "yerek", "madan", "meden", "mak", "mek", "ma", "me",
+  ...iki("", "n"), ...iki("y", "n"), ...dort("d", "k"), ...dort("t", "k"), ...dort("d", "ğ"), ...dort("t", "ğ"),
+  // yeterlik ve çatı
+  "abil", "ebil", "yabil", "yebil", ...dort("", "l"), ...dort("", "n"), ...dort("", "ş"), ...dort("d", "r"), ...dort("t", "r"), "l", "n", "ş", "t",
+  // kişi
+  ...dort("", "m"), ...dort("s", "n"), ...dort("", "z"), ...dort("s", "nız"), ...dort("", "nız"), ...dort("y", "n"), ...dort("y", "nız"), "lar", "ler", "m", "z", "sak", "sek"
+])
+].sort((a, b) => b.length - a.length);
+const KISA_FIIL = new Set(["al","at","aç","as","ek","er","et","in","iç","it","ol","öl","ye","de","uç","oy","em","an","öv","ov","üz","ez","yu"]);
+const fiilVar = k => (k.length >= 3 || KISA_FIIL.has(k)) && (sozlukte(k + "mak") || sozlukte(k + "mek"));
+const UNLU_SON = /[aeıioöuü]$/;
+// Çatı ekleri köke uymalı: tek ünsüzlü l/n/ş/t ünlüyle biten köke (okun, söylet), ıl/il/ul/ül ünsüzle biten köke (yapıl) gelir.
+const catiUyar = (e, s) => /^[lnşt]$/.test(e) ? (UNLU_SON.test(s) || (e === "t" && s.length >= 4 && /[rl]$/.test(s))) : (/^[ıiuü]l$/.test(e) ? !UNLU_SON.test(s) : true);
+const CATI_EK = new Set([...dort("", "l"), ...dort("", "n"), ...dort("", "ş"), ...dort("d", "r"), ...dort("t", "r"), "l", "n", "ş", "t"]);
+function fiilCekimi(w) {
+  // Ekler sondan başa soyulur. Çatı eki soyulduktan sonra yalnızca yine çatı eki gelebilir (yap-ıl-ır doğru, kır-tı-l yanlış).
+  let sinir = [[w, false]]; const gor = new Set([w + "|0"]);
+  for (let tur = 0; tur < 5 && sinir.length; tur++) {
+    const yeni = [];
+    for (const [k, catida] of sinir) for (const e of FIIL_EK) {
+      if (k.length - e.length < 2 || !k.endsWith(e)) continue;
+      const cati = CATI_EK.has(e);
+      if (catida && !cati) continue;
+      const s = k.slice(0, -e.length), aday = [s];
+      if (!catiUyar(e, s)) continue;
+      if (YUMUSAK[s.at(-1)]) aday.push(s.slice(0, -1) + YUMUSAK[s.at(-1)]);
+      if (/yor$/.test(e) && /[ıiuü]$/.test(s)) aday.push(s.slice(0, -1) + (/[ıu]$/.test(s) ? "a" : "e"));
+      for (const a of aday) {
+        if (fiilVar(a)) return true;
+        const anahtar = a + "|" + (cati ? 1 : 0);
+        if (!gor.has(anahtar) && gor.size < 4000) { gor.add(anahtar); yeni.push([a, cati]); }
+      }
+    }
+    sinir = yeni;
+  }
+  return false;
+}
 function gercekKelime(w) {
   if (sozlukte(w) || sozlukte(w + "mak") || sozlukte(w + "mek")) return true;
-  for (const k of kokler(w, false)) if (sozlukte(k) || sozlukte(k + "mak") || sozlukte(k + "mek")) return true;
-  return false;
+  const kk = kokler(w, false);
+  for (const k of kk) if (sozlukte(k) || sozlukte(k + "mak") || sozlukte(k + "mek")) return true;
+  return fiilCekimi(w) || kk.some(k => k.length >= 4 && fiilCekimi(k));
 }
 const denetlenmez = p => p.length < 2 || p.includes("-");
 /* Gizlenmiş yazımlar: harfleri ayrı yazılmış (s i k), rakam ya da işaretle yazılmış (s1k, @m), harf uzatılmış (siiik) */
