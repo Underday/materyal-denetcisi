@@ -1,0 +1,617 @@
+<title>Materyal Denetçisi</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="hece.css">
+<style>
+/* Araç sayfası: Hece tasarım dili, tek sütun. Üstte küçük prosedürel resim ve başlık, ortada giriş, altta bulgular. */
+:root {
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --kotu: #b42318; --uyari: #a15c07;          /* anlam renkleri, vurgu renginden ayrı */
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --kotu: #ff8b7d; --uyari: #f0b45c; } }
+:root[data-theme="dark"] { --kotu: #ff8b7d; --uyari: #f0b45c; }
+
+.arac { max-width: 760px; margin: 0 auto; display: grid; gap: 40px;
+  padding: 40px max(20px, env(safe-area-inset-right, 0px)) 64px max(20px, env(safe-area-inset-left, 0px)); }
+.ust { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.geri { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); text-decoration: none; }
+.geri:hover { color: var(--fg); }
+.baslik { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 24px; align-items: center; }
+.baslik figure { margin: 0; display: grid; gap: 2px; justify-items: start; }
+.baslik svg { width: 132px; height: 132px; cursor: pointer; transition: transform .25s ease; }
+.baslik svg:hover { transform: scale(1.04) rotate(-2deg); }
+.baslik h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.1rem, 5vw, 3rem); line-height: 1.02; letter-spacing: -0.02em; margin: 0; }
+.baslik p { margin-top: 10px; color: var(--muted); max-width: 52ch; }
+.yenile { font: inherit; font-size: 0.78rem; font-weight: 500; color: var(--muted); background: none; border: none; padding: 2px 0; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
+.yenile:hover { color: var(--fg); }
+.yenile-ok { display: inline-block; color: var(--metin-vurgu); }
+.yenile.dondu .yenile-ok { animation: don .5s ease; }
+@keyframes don { to { transform: rotate(360deg); } }
+@media (max-width: 520px) { .baslik { grid-template-columns: 88px minmax(0, 1fr); gap: 16px; } .baslik svg { width: 88px; height: 88px; } .yenile { display: none; } }
+@media (prefers-reduced-motion: reduce) { .baslik svg:hover { transform: none; } .yenile.dondu .yenile-ok { animation: none; } }
+
+.giris { border: 1px solid var(--line); border-radius: 10px; background: var(--kart); overflow: hidden; }
+.giris.surukle { border-color: var(--vurgu); box-shadow: 0 0 0 2px var(--vurgu); }
+.giris-ust { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.giris-ust span { color: var(--muted); font-size: 0.92rem; }
+textarea { display: block; width: 100%; min-height: 220px; resize: vertical; font-family: var(--mono); font-size: 0.95rem; line-height: 1.6;
+  background: transparent; color: var(--fg); border: none; padding: 14px; }
+textarea:focus-visible, select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+.btn { font: inherit; font-size: 0.92rem; padding: 6px 14px; border-radius: 99px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.btn:hover { border-color: var(--fg); }
+.btn.ana { font-weight: 600; border-color: var(--fg); background: var(--fg); color: var(--bg); }
+.btn.ana:hover { background: var(--metin-vurgu); border-color: var(--metin-vurgu); }
+select, input[type=text] { font: inherit; font-size: 0.95rem; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--kart); color: var(--fg); }
+input[type=text] { flex: 1 1 180px; min-width: 0; }
+.kucuk { font-size: 0.88rem; color: var(--muted); margin: 0; }
+.cubuk { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+code { font-family: var(--mono); font-size: 0.9em; }
+
+.sonuclar { display: grid; gap: 20px; }
+.ozet { font-family: var(--serif); font-weight: 300; font-size: clamp(1.5rem, 3.4vw, 2.1rem); line-height: 1.2; letter-spacing: -0.01em; text-wrap: balance; }
+.ozet b { font-weight: 600; color: var(--metin-vurgu); }
+.ozet .ek { display: block; margin-top: 8px; font-family: var(--sans); font-size: 0.88rem; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+ol.sonuc { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+ol.sonuc > li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); gap: 3px 10px; padding: 12px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+ol.sonuc > li:hover .kelimeler { text-decoration: underline; text-decoration-color: var(--vurgu); }
+.no { color: var(--muted); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; padding-top: 3px; }
+.kelimeler { font-family: var(--mono); }
+.kelimeler .sahte { color: var(--muted); }
+.kelimeler .x { color: var(--kotu); text-decoration: underline wavy; text-underline-offset: 3px; }
+.kelimeler .y { color: var(--uyari); text-decoration: underline wavy; text-underline-offset: 3px; }
+.bulgu { grid-column: 2; font-size: 0.92rem; margin: 0; }
+.bulgu.bad { color: var(--kotu); } .bulgu.warn { color: var(--uyari); } .bulgu.note { color: var(--muted); }
+details > summary { cursor: pointer; color: var(--muted); padding: 4px 0; font-size: 0.95rem; }
+details > summary:hover { color: var(--fg); }
+details[open] > summary { margin-bottom: 10px; }
+.ayarlar { border-top: 1px solid var(--line); padding-top: 18px; }
+.ayar-ic { display: grid; gap: 28px; padding-top: 8px; }
+.ayar-ic h2 { margin-bottom: 10px; }
+.sesler { display: flex; flex-wrap: wrap; gap: 4px; }
+.ses { font: inherit; font-size: 0.9rem; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--kart); color: var(--fg); cursor: pointer; }
+.ses[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.kacin .ses[aria-pressed="true"] { background: var(--kotu); border-color: var(--kotu); color: var(--bg); }
+.etiket { font-size: 0.88rem; color: var(--muted); display: block; margin-bottom: 6px; }
+</style>
+
+<div class="arac">
+  <div class="ust">
+    <a class="geri" href="https://underday.github.io/">← underday.github.io</a>
+    <button class="tema" id="tema" type="button">Tema: sistem</button>
+  </div>
+
+  <header class="baslik">
+    <figure>
+      <svg id="resim" viewBox="0 0 400 400" role="img" aria-label="Rastgele renkli bir şekil ve üzerinde işaretli kelimeler bulunan yazı satırları. Yenilemek için tıklayın."></svg>
+      <figcaption><button type="button" class="yenile" id="yenile"><span class="yenile-ok" aria-hidden="true">↻</span> Başka çiz</button></figcaption>
+    </figure>
+    <div>
+      <h1>Materyal Denetçisi</h1>
+      <p>Aileye göndermeden önce materyalinizi buraya bırakın. Uygunsuz kelimeleri ve yazım hatalarını işaretler.</p>
+    </div>
+  </header>
+
+  <div class="giris" id="giris">
+    <div class="giris-ust">
+      <span id="dosya-durum">PDF ya da Word dosyasını buraya sürükleyin, ya da metni yapıştırın.</span>
+      <button class="btn ana" id="dosya-btn" type="button">Dosya seç</button>
+      <input type="file" id="dosya" accept=".pdf,.docx,.txt,.md,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden>
+    </div>
+    <textarea id="girdi" spellcheck="false" aria-label="Materyal metni"></textarea>
+  </div>
+
+  <section class="sonuclar" aria-live="polite">
+    <div class="ozet" id="ozet">Sözlük yükleniyor...</div>
+    <div id="degistir-kutu" hidden>
+      <h2>Değiştirin</h2>
+      <ol class="sonuc" id="degistir"></ol>
+    </div>
+    <details id="goz-kutu" hidden>
+      <summary id="goz-baslik">Göz atın</summary>
+      <ol class="sonuc" id="goz"></ol>
+    </details>
+  </section>
+
+  <details class="ayarlar">
+    <summary>Ayarlar ve açıklama</summary>
+    <div class="ayar-ic">
+      <div>
+        <h2>Satırlar nasıl okunsun?</h2>
+        <select id="bicim" aria-label="Satır biçimi">
+          <option value="oto">Otomatik</option>
+          <option value="cift">Doğru / yanlış söyleyiş çifti</option>
+          <option value="minimal">Minimal çift (ikisi de gerçek kelime)</option>
+          <option value="liste">Kelime listesi</option>
+          <option value="metin">Serbest metin</option>
+        </select>
+        <p class="kucuk" style="margin-top:8px">Otomatik modda <code>kapı / tapı</code> gibi birbirine çok benzeyen kelimeler doğru / yanlış çifti sayılır.</p>
+      </div>
+      <div>
+        <h2>Hedef ses denetimi</h2>
+        <p class="kucuk" style="margin-bottom:10px">Artikülasyon materyali için. Ses seçmezseniz bu denetim çalışmaz.</p>
+        <div style="display:grid; gap:12px">
+          <div><span class="etiket" id="l-hedef">Kelimede olması gereken ses</span><div class="sesler" id="hedef" role="group" aria-labelledby="l-hedef"></div></div>
+          <div class="kacin"><span class="etiket" id="l-kacin">Kelimede olmaması gereken ses</span><div class="sesler" id="kacin" role="group" aria-labelledby="l-kacin"></div></div>
+          <div class="cubuk">
+            <label class="kucuk">Sesin yeri
+              <select id="konum">
+                <option value="her">herhangi bir yer</option>
+                <option value="bas">kelime başı</option>
+                <option value="orta">kelime ortası</option>
+                <option value="son">kelime sonu</option>
+              </select>
+            </label>
+            <button class="btn" id="temizle" type="button">Seçimi temizle</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2>Listeye kelime ekle</h2>
+        <div class="cubuk">
+          <input type="text" id="yeni" autocomplete="off" aria-label="Eklenecek kelime">
+          <button class="btn" id="ekle" type="button">Ekle</button>
+          <button class="btn" id="sifirla" type="button">Eklediklerimi sil</button>
+        </div>
+        <p class="kucuk" id="toast" style="margin-top:8px">Eklediğiniz kelime yalnızca bu tarayıcıda saklanır ve gösterilmez.</p>
+      </div>
+      <div class="kucuk" style="display:grid; gap:10px">
+        <h2>Nasıl çalışıyor?</h2>
+        <p>Uygunsuz kelime listesi sayfada açık yazılmaz, yalnızca hash olarak durur. Eşleşen kelimenin ne olduğu gösterilmez, yalnızca sizin yazdığınız kelime işaretlenir. Bu, göz atan birine karşı yeterlidir. Ancak bilgisayar bilgisi olan biri deneme yoluyla listeyi tahmin edebilir.</p>
+        <p>Uygunsuz kelime listesi kendi listemiz ile açık kaynaklı <a href="https://github.com/ooguz/turkce-kufur-karaliste">Türkçe kara liste</a> (CC BY-SA 4.0), <a href="https://github.com/egemenzeytinci/kufur-blok">kufur-blok</a> ve <a href="https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words">LDNOOBW</a> (CC BY 4.0) listelerinden elle ayıklanarak derlendi. Gündelik dilde masum anlamı da olan kelimeler bilerek dışarıda bırakıldı.</p>
+        <p>Sözlük olarak TDK Güncel Türkçe Sözlük kelime listesi kullanılır. Ekli kelimeler köke indirilerek aranır, bu yüzden ara sıra yanlış not çıkabilir.</p>
+        <p>Dosyalar hiçbir yere gönderilmez, tarayıcınızda okunur. Taranmış (resim) PDF'ler ve eski .doc dosyaları okunamaz.</p>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script src="hece-resim.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script>
+(() => {
+"use strict";
+const TUZ = "dkt-materyal-v1|";
+const ABC = "abcçdefgğhıijklmnoöprsştuüvyz";
+const UNLU = new Set("aeıioöuü");
+const UNSUZLER = "bcçdfghjklmnprsştvyz".split("");
+const EKLER = ["lerinden","larından","lerinin","larının","lerine","larına","lerini","larını","lerde","larda","lerden","lardan","lerin","ların","leri","ları","lere","lara","ler","lar",
+  "ımız","imiz","umuz","ümüz","lık","lik","luk","lük","cık","cik","cuk","cük","çık","çik","çuk","çük","dan","den","tan","ten","nın","nin","nun","nün",
+  "yla","yle","sı","si","su","sü","ın","in","un","ün","ya","ye","yı","yi","yu","yü","da","de","ta","te","la","le","ım","im","um","üm","cı","ci","cu","cü","çı","çi","çu","çü",
+  "ı","i","u","ü","a","e","m","n"];
+const UZUN_EK = new Set(EKLER.filter(e => e.length >= 2));
+const YUMUSAK = { b: "p", c: "ç", d: "t", ğ: "k", g: "k" };
+
+const ORNEK = `# 1. Seviye
+kapı / tapı
+kedi / tedi
+kalem / talem
+# 2. Seviye
+tavuk / kavuk / tavut
+tabak / kabak / tabat
+toka / koka / tota
+# 3. Seviye
+kitap / titap / kikap
+çikolata / çitolata / çikolaka
+kertenkele / tertenkele / kerkenkele`;
+
+const cyrb53 = (str, seed = 0) => {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507); h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507); h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+};
+const norm = w => w.normalize("NFC").trim().replace(/I/g, "ı").replace(/İ/g, "i").toLocaleLowerCase("tr")
+  .replace(/[âÂ]/g, "a").replace(/[îÎ]/g, "i").replace(/[ûÛ]/g, "u");
+const hs = w => cyrb53(TUZ + w).toString(36);
+
+let SOZ = new Set(), ARGO = new Set(), YAKIN = new Set(), yuklendi = false;
+const YEREL = "materyal-denetcisi-ek";
+function yerelOku() { try { return JSON.parse(localStorage.getItem(YEREL) || "[]").map(x => typeof x === "string" ? { h: x, u: false } : x); } catch { return []; } }
+function yerelYaz(a) { try { localStorage.setItem(YEREL, JSON.stringify(a)); return true; } catch { return false; } }
+
+const sozlukte = w => SOZ.has(hs(w));
+const argoTam = w => ARGO.has(hs(w));
+
+function kokler(w, sadeceUzun) {
+  const out = new Set(); let sinir = [w];
+  for (let tur = 0; tur < 3; tur++) {
+    const yeni = [];
+    for (const k of sinir) for (const e of EKLER) {
+      if (sadeceUzun && !UZUN_EK.has(e)) continue;
+      if (k.length - e.length >= 2 && k.endsWith(e)) {
+        const s = k.slice(0, -e.length);
+        if (!out.has(s)) { out.add(s); yeni.push(s); }
+        const son = s.at(-1);
+        if (YUMUSAK[son]) { const s2 = s.slice(0, -1) + YUMUSAK[son]; if (!out.has(s2)) { out.add(s2); yeni.push(s2); } }
+      }
+    }
+    sinir = yeni;
+  }
+  return [...out];
+}
+
+const ARGO_BELLEK = new Map();
+function argoDurum(w) {
+  if (w.includes(" ")) {
+    let sonuc = null;
+    for (const p of w.split(" ")) { const a = argoDurum(p); if (a === "tam") return "tam"; if (a) sonuc = a; }
+    return sonuc;
+  }
+  if (ARGO_BELLEK.has(w)) return ARGO_BELLEK.get(w);
+  const sonuc = argoHesapla(w); ARGO_BELLEK.set(w, sonuc); return sonuc;
+}
+function argoHesapla(w) {
+  if (argoTam(w)) return "tam";
+  const gercek = sozlukte(w);
+  if (!gercek) for (const k of kokler(w, false)) if (argoTam(k)) return "tam";
+  if (!gercek && w.length >= 4) {
+    for (let i = 0; i <= w.length; i++) {
+      if (i < w.length && YAKIN.has(hs(w.slice(0, i) + w.slice(i + 1)))) return "yakin";
+      for (const c of ABC) {
+        if (i < w.length && c !== w[i] && YAKIN.has(hs(w.slice(0, i) + c + w.slice(i + 1)))) return "yakin";
+        if (YAKIN.has(hs(w.slice(0, i) + c + w.slice(i)))) return "yakin";
+      }
+    }
+  }
+  return null;
+}
+function gercekKelime(w) {
+  if (sozlukte(w) || sozlukte(w + "mak") || sozlukte(w + "mek")) return true;
+  for (const k of kokler(w, false)) if (sozlukte(k) || sozlukte(k + "mak") || sozlukte(k + "mek")) return true;
+  return false;
+}
+const denetlenmez = p => p.length < 2 || p.includes("-");
+/* Gizlenmiş yazımlar: harfleri ayrı yazılmış (s i k), rakam ya da işaretle yazılmış (s1k, @m), harf uzatılmış (siiik) */
+const LEET = { "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "8": "b", "@": "a", "$": "s", "!": "i", "€": "e" };
+function gizliUygunsuz(ham) {
+  const bulunan = new Set();
+  const dene = (goster, aday) => {
+    const w = norm(aday).replace(/[^\p{L}]/gu, "");
+    if (w.length < 2) return;
+    const tekrar = w.replace(/(\p{L})\1+/gu, "$1");
+    if (argoTam(w) || argoTam(tekrar) || (!sozlukte(w) && argoDurum(w) === "tam")) bulunan.add(goster.trim());
+  };
+  const metin = ham.normalize("NFKC");
+  // 1. Tek harflerin art arda yazılması: "s i k", "a m", "s.i.k", "s-i-k"
+  for (const m of metin.matchAll(/(?:^|[^\p{L}\d])((?:[\p{L}\d@$!][\s.\-_*]+){1,6}[\p{L}\d@$!])(?=$|[^\p{L}\d])/gu)) {
+    const parca = m[1];
+    if (!/^(?:[\p{L}\d@$!][\s.\-_*]+)+[\p{L}\d@$!]$/u.test(parca)) continue;
+    dene(parca, [...parca.replace(/[\s.\-_*]+/g, "")].map(c => LEET[c] || c).join(""));
+  }
+  // 2. Kelime içinde rakam ya da işaret: "s1k", "@m", "p0rn0"
+  for (const t of metin.split(/[\s,;/|]+/)) {
+    if (!(/[\d@$!€]/.test(t) || /(\p{L})\1\1/u.test(t)) || !/\p{L}/u.test(t)) continue;
+    dene(t, [...t].map(c => LEET[c] || c).join(""));
+  }
+  return [...bulunan];
+}
+const cokKelimeGercek = w => w.split(" ").every(p => denetlenmez(p) || gercekKelime(p));
+
+/* Çocuk bu kelimeyi bir sesi değiştirerek söylerse uygunsuz bir kelimeye dönüşür mü? */
+const VARSAYILAN_CIFTLER = [["k","t"],["g","d"],["s","ş"],["z","s"],["r","l"],["r","y"],["ç","ş"],["k","g"],["t","d"],["p","b"]];
+function olasiUygunsuz(w, ciftler, haric) {
+  for (let i = 0; i < w.length; i++) for (const [a, b] of ciftler) {
+    const yeni = w[i] === a ? b : w[i] === b ? a : null;
+    if (!yeni) continue;
+    const v = w.slice(0, i) + yeni + w.slice(i + 1);
+    if (!haric.includes(v) && argoTam(v)) return true;
+  }
+  return false;
+}
+/* Doğru ile yanlış arasındaki ses değişimleri, ör. [["k","t"]] */
+function degisimler(d, y) {
+  if (d.length !== y.length) return null;
+  const out = [];
+  for (let i = 0; i < d.length; i++) if (d[i] !== y[i]) out.push([d[i], y[i]]);
+  return out;
+}
+const hece = w => [...w].filter(c => UNLU.has(c)).length;
+function sesKonum(w, s) {
+  const yer = [];
+  [...w].forEach((c, i) => { if (c === s) yer.push(i === 0 ? "bas" : i === w.length - 1 ? "son" : "orta"); });
+  return yer;
+}
+const KONUM_AD = { bas: "başında", orta: "ortasında", son: "sonunda" };
+const BUYUK = s => s.toLocaleUpperCase("tr");
+
+function duzenleme(a, b) {
+  const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[m][n];
+}
+function oneriler(dogru, mevcut) {
+  const sahte = mevcut.find(w => w.length === dogru.length); if (!sahte) return [];
+  const harfler = new Set();
+  for (let i = 0; i < dogru.length; i++) if (dogru[i] !== sahte[i]) { harfler.add(dogru[i]); harfler.add(sahte[i]); }
+  if (harfler.size !== 2) return [];
+  const [a, b] = [...harfler];
+  const yerler = [...dogru].map((c, i) => (c === a || c === b) ? i : -1).filter(i => i >= 0).slice(0, 8);
+  const adaylar = [];
+  for (let mask = 1; mask < (1 << yerler.length); mask++) {
+    const arr = [...dogru];
+    yerler.forEach((p, k) => { if (mask & (1 << k)) arr[p] = arr[p] === a ? b : a; });
+    const w = arr.join("");
+    if (w === dogru || mevcut.includes(w) || argoDurum(w) || sozlukte(w)) continue;
+    adaylar.push([w, yerler.filter((_, k) => mask & (1 << k)).length]);
+  }
+  return adaylar.sort((x, y) => x[1] - y[1]).slice(0, 3).map(x => x[0]);
+}
+
+const AYIRICI = /\s*(?:\t|\/|→|->|=>|\||\s[–-]\s)\s*/;
+const LISTE_AYIRICI = /\s*[,;]\s*/;
+const BASLIK = /^(?:doğru|yanlış|söyleyiş|söyleyişi|kelime|kelimeler|hedef|no|sıra|çalıştık|eşyalı|boş|el|[\s()\/\t|:,.#-])+$/iu;
+/* Otomatik modda bir satırı doğru / yanlış çifti saymak için: her yanlış söyleyiş doğru kelimeden farklı ama ona çok yakın olmalı */
+function benzerCift(d, y) {
+  if (!d || !y.length || /[-\s]/.test(d) || d.length < 3) return false;
+  return y.every(x => x !== d && !/[-\s]/.test(x) && duzenleme(d, x) <= Math.max(1, Math.ceil(d.length / 3)));
+}
+function satirCoz(ham, bicim) {
+  let s = ham.normalize("NFKC").replace(/\u00ad/g, "").replace(/[☐☑✓✔□*_`]/g, " ").replace(/\u00a0/g, " ").trim();
+  if (!s) return null;
+  if (s.startsWith("#")) return { tur: "bolum", ad: s.replace(/^#+\s*/, "") };
+  s = s.replace(/^(?:[-•–]|\d+[.)]?)\s+/, "");
+  if (!s || BASLIK.test(s)) return null;
+  /* "Doğru: kutu  Yanlış: kuku" biçimi */
+  s = s.replace(/(^|\s)(?:doğru|yanlış)(?:\s+söyleyiş(?:i)?)?\s*:\s*/giu, "$1/ ").replace(/^\s*\/\s*/, "").replace(/(\/\s*){2,}/g, "/ ");
+  const kel = t => t.split(/\s+/).map(x => norm(x.replace(/['’].*$/u, "").replace(/[^\p{L}-]/gu, "").replace(/^-+|-+$/g, ""))).filter(Boolean);
+  if (bicim === "metin") return { tur: "metin", kelimeler: kel(s) };
+  if (bicim === "liste") return { tur: "liste", dogru: kel(s) };
+  const ciftMi = bicim === "cift" || bicim === "minimal";
+  const parca = s.split(ciftMi ? /\s*(?:\t|\/|→|->|=>|\||,|;|\s[–-]\s)\s*/ : AYIRICI).map(p => p.trim()).filter(Boolean);
+  if (parca.length > 1) {
+    const d = kel(parca[0]), y = parca.slice(1).map(p => kel(p).join(" ")).filter(Boolean);
+    if (ciftMi || benzerCift(d.join(" "), y)) return { tur: "cift", dogru: d.join(" "), sahte: y };
+    const hepsi = [d.join(" "), ...y].filter(Boolean);
+    if (hepsi.every(x => x.split(" ").length <= 2)) return { tur: "liste", dogru: hepsi };
+    return { tur: "metin", kelimeler: kel(s) };
+  }
+  if (!ciftMi) {
+    const lp = s.split(LISTE_AYIRICI).filter(Boolean);
+    if (lp.length > 1 && lp.every(p => kel(p).length <= 2)) return { tur: "liste", dogru: lp.map(p => kel(p).join(" ")).filter(Boolean) };
+  }
+  const k = kel(s);
+  if (ciftMi) return { tur: "cift", dogru: k[0] || "", sahte: k.slice(1) };
+  if (k.length === 1) return { tur: "liste", dogru: k };
+  if (k.length <= 3 && benzerCift(k[0], k.slice(1))) return { tur: "cift", dogru: k[0], sahte: k.slice(1) };
+  return { tur: "metin", kelimeler: k };
+}
+
+const ayar = { hedef: new Set(), kacin: new Set() };
+let sekme = "genel";
+function sesDugmeleri(kap, tur) {
+  for (const s of UNSUZLER) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "ses"; b.textContent = BUYUK(s); b.dataset.ses = s;
+    b.setAttribute("aria-pressed", "false"); b.setAttribute("aria-label", BUYUK(s) + " sesi");
+    b.addEventListener("click", () => {
+      const set = ayar[tur], on = !set.has(s);
+      on ? set.add(s) : set.delete(s); b.setAttribute("aria-pressed", String(on));
+      const diger = tur === "hedef" ? "kacin" : "hedef";
+      if (on && ayar[diger].delete(s)) document.querySelector(`#${diger} [data-ses="${s}"]`).setAttribute("aria-pressed", "false");
+      denetle();
+    });
+    kap.appendChild(b);
+  }
+}
+
+const argoMesaj = (w, a, sahte) => a === "tam"
+  ? ["bad", sahte ? `"${w}" uygunsuz bir anlama geliyor. Başka bir yanlış söyleyiş seçin.` : `"${w}" uygunsuz bir anlama geliyor. Değiştirin.`]
+  : ["warn", `"${w}" uygunsuz bir kelimeye çok benziyor.`];
+
+function dogruDenetle(w, bulgu, ciftler, haric) {
+  const a = argoDurum(w);
+  if (a) bulgu.push(argoMesaj(w, a, false));
+  if (!a && !cokKelimeGercek(w)) bulgu.push(["note", `"${w}" sözlükte yok. Yazımına bakın.`]);
+  if (!a && ciftler && w.split(" ").some(p => olasiUygunsuz(p, ciftler, haric)))
+    bulgu.push(["warn", `Çocuk "${w}" kelimesinde bir sesi değiştirirse uygunsuz bir kelime çıkabiliyor. Bu kelimeyi kullanmamanız önerilir.`]);
+  if (sekme === "ses") {
+    if (ayar.hedef.size) {
+      const konum = document.getElementById("konum").value;
+      const tamam = [...ayar.hedef].some(s => { const y = sesKonum(w, s); return konum === "her" ? y.length : y.includes(konum); });
+      if (!tamam) {
+        const ad = [...ayar.hedef].map(BUYUK).join(", ");
+        const herhangi = [...ayar.hedef].some(s => sesKonum(w, s).length);
+        bulgu.push(["warn", herhangi ? `"${w}" kelimesinde ${ad} var ama kelimenin ${KONUM_AD[konum]} değil.` : `"${w}" kelimesinde ${ad} yok.`]);
+      }
+    }
+    const kacan = [...ayar.kacin].filter(s => w.includes(s));
+    if (kacan.length) bulgu.push(["warn", `"${w}" kelimesinde ${kacan.map(BUYUK).join(", ")} var.`]);
+  }
+  return a;
+}
+
+const span = (t, cls) => { const e = document.createElement("span"); if (cls) e.className = cls; e.textContent = t; return e; };
+const isaret = a => a === "tam" ? "x" : a === "yakin" ? "y" : "";
+
+function denetle() {
+  if (!yuklendi) return;
+  sekme = (ayar.hedef.size || ayar.kacin.size) ? "ses" : "genel";
+  const bicim = $("bicim").value;
+  const degistir = $("degistir"), goz = $("goz"); degistir.textContent = ""; goz.textContent = "";
+  let no = 0, nDeg = 0, nGoz = 0, nUygunsuz = 0;
+  const hamSatirlar = girdi.value.split(/\r?\n/);
+  const cozulmus = hamSatirlar.map(h => satirCoz(h, bicim));
+  const yon = new Map();
+  for (const r of cozulmus) if (r && r.tur === "cift") for (const y of r.sahte) {
+    const dg = degisimler(r.dogru, y); if (!dg) continue;
+    for (const [a, b] of dg) yon.set(a + "→" + b, (yon.get(a + "→" + b) || 0) + 1);
+  }
+  let ciftler;
+  if (sekme === "ses") {
+    ciftler = []; for (const a of ayar.hedef) for (const b of ayar.kacin) ciftler.push([a, b]);
+    if (!ciftler.length) ciftler = VARSAYILAN_CIFTLER;
+  } else if (yon.size) ciftler = [...yon.keys()].map(k => k.split("→"));
+  else ciftler = VARSAYILAN_CIFTLER;
+  for (let si = 0; si < hamSatirlar.length; si++) {
+    const r = cozulmus[si]; if (!r || r.tur === "bolum") continue;
+    no++;
+    const bulgu = [], kel = document.createElement("div"); kel.className = "kelimeler";
+    if (r.tur === "metin") {
+      r.kelimeler.forEach((w, i) => { const a = argoDurum(w); if (a) bulgu.push(argoMesaj(w, a, false)); if (i) kel.append(" "); kel.append(span(w, isaret(a))); });
+    } else {
+      const dogrular = (r.tur === "liste" ? r.dogru : [r.dogru]).filter(Boolean);
+      const haric = r.tur === "cift" ? r.sahte : [];
+      const satirCiftleri = (r.tur === "cift" || sekme === "ses") ? ciftler : null;
+      dogrular.forEach((w, i) => { const a = dogruDenetle(w, bulgu, satirCiftleri, haric); if (i) kel.append(span(r.tur === "liste" ? " · " : " ", "sahte")); kel.append(span(w, isaret(a))); });
+      if (r.tur === "cift") {
+        let kotu = false;
+        for (const w of r.sahte) {
+          const a = argoDurum(w);
+          if (a) { bulgu.push(argoMesaj(w, a, true)); kotu = true; }
+          if (!a && bicim === "minimal") { if (!cokKelimeGercek(w)) bulgu.push(["note", `"${w}" sözlükte yok. Minimal çiftte iki kelime de gerçek olmalı.`]); }
+          else if (!a && sozlukte(w)) bulgu.push(["note", `"${w}" gerçek bir kelime.`]);
+          if (w === r.dogru && !denetlenmez(w)) bulgu.push(["warn", "Yanlış söyleyiş doğru kelimeyle aynı."]);
+          const dg = degisimler(r.dogru, w);
+          if (dg && dg.length > 1 && new Set(dg.map(([x, y]) => [x, y].sort().join(""))).size > 1)
+            bulgu.push(["warn", `"${w}" doğru kelimeden birden fazla farklı seste ayrılıyor (${dg.map(([x, y]) => x + "→" + y).join(", ")}).`]);
+          kel.append(span(" / ", "sahte"), span(w, isaret(a) || "sahte"));
+        }
+        if (kotu) { const o = oneriler(r.dogru, r.sahte); if (o.length) bulgu.push(["note", `Yerine şunlar olabilir: ${o.join(", ")}`]); }
+      }
+    }
+    const yalin = g => norm(g).replace(/[^\p{L}]/gu, "");
+    const gizli = gizliUygunsuz(hamSatirlar[si]).filter(g => !bulgu.some(b => b[0] === "bad" && b[1].includes(`"${yalin(g)}"`)));
+    if (gizli.length) {
+      // Gizli yazımda ayrıştırılmış hâli anlamsız kalır: satırı olduğu gibi göster, sözlük notlarını at
+      for (let k = bulgu.length - 1; k >= 0; k--) if (bulgu[k][0] === "note") bulgu.splice(k, 1);
+      kel.textContent = ""; kel.append(span(hamSatirlar[si].trim(), "x"));
+      for (const g of gizli) bulgu.push(["bad", `"${g}" gizlenmiş biçimde yazılmış uygunsuz bir kelime. Değiştirin.`]);
+    }
+    if (!bulgu.length) continue;
+    nUygunsuz += bulgu.filter(b => b[0] === "bad").length;
+    const onemli = bulgu.some(b => b[0] !== "note");
+    const li = document.createElement("li"); li.dataset.satir = si; li.title = "Kutuda bu satıra git";
+    li.append(span(String(si + 1), "no"), kel);
+    for (const [t, m] of bulgu) { const p = document.createElement("p"); p.className = "bulgu " + t; p.textContent = m; li.appendChild(p); }
+    if (onemli) { degistir.appendChild(li); nDeg++; } else { goz.appendChild(li); nGoz++; }
+  }
+  $("degistir-kutu").hidden = !nDeg;
+  $("goz-kutu").hidden = !nGoz;
+  $("goz-baslik").textContent = `Göz atın (${nGoz} satır, büyük olasılıkla sorun değil)`;
+  const oz = $("ozet"); oz.textContent = ""; oz.className = "ozet";
+  if (!no) { oz.textContent = "Denetlenecek bir şey yok."; return; }
+  if (!nDeg) { oz.classList.add("temiz"); oz.textContent = `Değiştirmeniz gereken bir şey bulunmadı (${no} satır).`; }
+  else { const b = document.createElement("b"); b.textContent = `${nDeg} satırı`; oz.append(b, " değiştirin."); if (nUygunsuz) oz.append(` ${nUygunsuz} tanesinde uygunsuz kelime var.`); }
+  if (yon.size) {
+    const sirali = [...yon.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+    oz.append(span("Yanlış söyleyişlerdeki ses değişimleri: " + sirali.map(([k, n]) => `${BUYUK(k)} ${n}`).join(", ") + ".", "ek"));
+  }
+}
+function satiraGit(i) {
+  const satirlar = girdi.value.split("\n"); let bas = 0;
+  for (let k = 0; k < i; k++) bas += satirlar[k].length + 1;
+  girdi.focus(); girdi.setSelectionRange(bas, bas + satirlar[i].length);
+  const oran = i / Math.max(1, satirlar.length); girdi.scrollTop = oran * girdi.scrollHeight - girdi.clientHeight / 3;
+  girdi.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+/* Dosya okuma */
+async function pdfMetni(buf) {
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const satirlar = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const sayfa = await pdf.getPage(p);
+    const ic = await sayfa.getTextContent();
+    const ogeler = ic.items.filter(i => i.str && i.str.trim()).map(i => ({ s: i.str, x: i.transform[4], y: i.transform[5], w: i.width, h: Math.abs(i.transform[3]) || 10 }));
+    ogeler.sort((a, b) => b.y - a.y || a.x - b.x);
+    let grup = [];
+    const bosalt = () => {
+      if (!grup.length) return;
+      grup.sort((a, b) => a.x - b.x);
+      let t = grup[0].s;
+      for (let i = 1; i < grup.length; i++) {
+        const bosluk = grup[i].x - (grup[i-1].x + grup[i-1].w);
+        t += (bosluk > grup[i].h * 1.5 ? "\t" : bosluk > grup[i].h * 0.15 ? " " : "") + grup[i].s;
+      }
+      satirlar.push(t.replace(/[ ]{2,}/g, " ").trim()); grup = [];
+    };
+    for (const o of ogeler) { if (grup.length && Math.abs(grup[0].y - o.y) > o.h * 0.5) bosalt(); grup.push(o); }
+    bosalt();
+  }
+  return satirlar.join("\n");
+}
+async function wordMetni(buf) {
+  const { value } = await mammoth.convertToHtml({ arrayBuffer: buf });
+  const dom = new DOMParser().parseFromString(value, "text/html");
+  const satirlar = [];
+  const gez = el => {
+    for (const c of el.children) {
+      if (c.tagName === "TABLE") {
+        for (const tr of c.querySelectorAll("tr")) satirlar.push([...tr.children].map(td => td.textContent.trim()).filter(Boolean).join("\t"));
+      } else if (/^(P|H[1-6]|LI)$/.test(c.tagName)) {
+        const t = c.textContent.trim(); if (t) satirlar.push(/^H/.test(c.tagName) ? "# " + t : t);
+      } else gez(c);
+    }
+  };
+  gez(dom.body);
+  return satirlar.filter(Boolean).join("\n");
+}
+async function dosyaOku(f) {
+  const d = document.getElementById("dosya-durum");
+  d.textContent = `"${f.name}" okunuyor...`;
+  try {
+    let metin;
+    if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+      if (!window.pdfjsLib) throw new Error("PDF okuyucu yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
+      metin = await pdfMetni(await f.arrayBuffer());
+    } else if (/\.docx$/i.test(f.name)) {
+      if (!window.mammoth) throw new Error("Word okuyucu yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
+      metin = await wordMetni(await f.arrayBuffer());
+    } else if (/\.doc$/i.test(f.name)) {
+      throw new Error("Eski .doc biçimi okunamıyor. Dosyayı Word'de .docx olarak kaydedip yükleyin.");
+    } else metin = await f.text();
+    if (!metin.trim()) throw new Error("Dosyada okunabilir metin bulunamadı. Taranmış (resim) bir PDF olabilir.");
+    document.getElementById("girdi").value = metin;
+    d.textContent = `"${f.name}" okundu.`;
+    denetle();
+  } catch (e) { d.textContent = e.message || "Dosya okunamadı."; }
+}
+
+function ekle() {
+  const inp = document.getElementById("yeni"), t = document.getElementById("toast");
+  const w = norm(inp.value.replace(/[^\p{L}\s]/gu, "")); if (!w) return;
+  const h = hs(w), u = w.length >= 6, a = yerelOku(); if (!a.some(x => x.h === h)) a.push({ h, u });
+  const ok = yerelYaz(a); ARGO.add(h); if (u) YAKIN.add(h); ARGO_BELLEK.clear();
+  inp.value = "";
+  t.textContent = ok ? "Eklendi. Bu tarayıcıda hatırlanacak." : "Eklendi, ancak tarayıcı kaydetmeye izin vermedi. Sayfa kapanınca unutulacak.";
+  denetle();
+}
+
+const $ = id => document.getElementById(id);
+const girdi = $("girdi");
+girdi.value = ORNEK;
+sesDugmeleri($("hedef"), "hedef"); sesDugmeleri($("kacin"), "kacin");
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+$("temizle").addEventListener("click", () => { ayar.hedef.clear(); ayar.kacin.clear(); document.querySelectorAll(".ses").forEach(b => b.setAttribute("aria-pressed", "false")); denetle(); });
+["bicim", "konum"].forEach(id => $(id).addEventListener("change", denetle));
+$("ekle").addEventListener("click", ekle);
+$("yeni").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); ekle(); } });
+let sifirOnay = false;
+$("sifirla").addEventListener("click", () => {
+  const b = $("sifirla");
+  if (!sifirOnay) { sifirOnay = true; b.textContent = "Emin misiniz? Tekrar basın"; setTimeout(() => { sifirOnay = false; b.textContent = "Eklediklerimi sil"; }, 4000); return; }
+  sifirOnay = false; b.textContent = "Eklediklerimi sil";
+  yerelYaz([]); $("toast").textContent = "Eklediğiniz kelimeler silindi."; yukle();
+});
+for (const id of ["degistir", "goz"]) $(id).addEventListener("click", e => { const li = e.target.closest("li[data-satir]"); if (li) satiraGit(+li.dataset.satir); });
+$("dosya-btn").addEventListener("click", () => $("dosya").click());
+$("dosya").addEventListener("change", e => { const f = e.target.files[0]; if (f) dosyaOku(f); e.target.value = ""; });
+const giris = $("giris");
+giris.addEventListener("dragover", e => { e.preventDefault(); giris.classList.add("surukle"); });
+giris.addEventListener("dragleave", e => { if (!giris.contains(e.relatedTarget)) giris.classList.remove("surukle"); });
+giris.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; giris.classList.remove("surukle"); if (f) { e.preventDefault(); dosyaOku(f); } });
+let zaman; girdi.addEventListener("input", () => { clearTimeout(zaman); zaman = setTimeout(denetle, 300); });
+
+const yukle = () => Promise.all([fetch("sozluk.json").then(r => r.json()), fetch("argo.json").then(r => r.json())])
+  .then(([soz, argo]) => { SOZ = new Set(soz); ARGO = new Set(argo.tam); YAKIN = new Set(argo.yakin); ARGO_BELLEK.clear(); for (const x of yerelOku()) { ARGO.add(x.h); if (x.u) YAKIN.add(x.h); } yuklendi = true; denetle(); })
+  .catch(() => { $("ozet").textContent = "Sözlük dosyaları yüklenemedi. Sayfayı yenileyin."; });
+yukle();
+})();
+</script>
+<script>HeceResim.bagla(document.getElementById("resim"), document.getElementById("yenile"), { motif: "metin" });</script>
+<script src="hece-tema.js"></script>
