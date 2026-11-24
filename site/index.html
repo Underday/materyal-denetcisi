@@ -180,6 +180,7 @@ const UNSUZLER = "bcçdfghjklmnprsştvyz".split("");
 const EKLER = ["lerinden","larından","lerinin","larının","lerine","larına","lerini","larını","lerde","larda","lerden","lardan","lerin","ların","leri","ları","lere","lara","ler","lar",
   "ımız","imiz","umuz","ümüz","lık","lik","luk","lük","cık","cik","cuk","cük","çık","çik","çuk","çük","dan","den","tan","ten","nın","nin","nun","nün",
   "yla","yle","sı","si","su","sü","ın","in","un","ün","ya","ye","yı","yi","yu","yü","da","de","ta","te","la","le","ım","im","um","üm","cı","ci","cu","cü","çı","çi","çu","çü",
+  "ndaki","ndeki","daki","deki","taki","teki","ki","dır","dir","dur","dür","tır","tir","tur","tür","ca","ce","ça","çe",
   "ı","i","u","ü","a","e","m","n"];
 const UZUN_EK = new Set(EKLER.filter(e => e.length >= 2));
 const YUMUSAK = { b: "p", c: "ç", d: "t", ğ: "k", g: "k" };
@@ -227,6 +228,11 @@ function kokler(w, sadeceUzun) {
         if (!out.has(s)) { out.add(s); yeni.push(s); }
         const son = s.at(-1);
         if (YUMUSAK[son]) { const s2 = s.slice(0, -1) + YUMUSAK[son]; if (!out.has(s2)) { out.add(s2); yeni.push(s2); } }
+        // Ünlü düşmesi: hükmü → hüküm, burnu → burun, ağzı → ağız (iki ünsüzle biten köke son ünlüye uyan ünlü eklenir)
+        if (s.length >= 3 && UNLU.has(e[0]) && !UNLU.has(son) && !UNLU.has(s.at(-2))) {
+          const u = [...s].reverse().find(c => UNLU.has(c));
+          if (u) { const s3 = s.slice(0, -1) + ({ a: "ı", ı: "ı", o: "u", u: "u", e: "i", i: "i", ö: "ü", ü: "ü" })[u] + son; if (!out.has(s3)) out.add(s3); }
+        }
       }
     }
     sinir = yeni;
@@ -244,11 +250,23 @@ function argoDurum(w) {
   if (ARGO_BELLEK.has(w)) return ARGO_BELLEK.get(w);
   const sonuc = argoHesapla(w); ARGO_BELLEK.set(w, sonuc); return sonuc;
 }
+// Yakınlık denetiminden muaf tutulacak çekimli gerçek kelime: birinin, yararı, yaradı, amacı
+const gercekKokVar = w => kokler(w, true).some(k => k.length >= 3 && sozlukte(k))
+  || kokler(w, false).some(k => k.length >= 3 && k.length >= w.length - 2 && sozlukte(k)) || fiilCekimi(w);
 function argoHesapla(w) {
   if (argoTam(w)) return "tam";
   const gercek = sozlukte(w);
-  if (!gercek) for (const k of kokler(w, false)) if (argoTam(k)) return "tam";
-  if (!gercek && w.length >= 4) {
+  if (!gercek) {
+    // Kök argo çıksa bile sözlükte daha uzun gerçek bir kök varsa kelime o köktendir (amacı = amaç + ı, am + acı değil).
+    const kk = kokler(w, false);
+    const argoKok = kk.filter(argoTam).reduce((m, k) => Math.max(m, k.length), 0);
+    if (argoKok) {
+      const gercekKok = kk.filter(k => sozlukte(k) || sozlukte(k + "mak") || sozlukte(k + "mek")).reduce((m, k) => Math.max(m, k.length), 0);
+      if (gercekKok <= argoKok) return "tam";
+    }
+  }
+  // Kökü sözlükte olan çekimli kelime (birinin, amacı) argoya bir harf yakın diye işaretlenmez.
+  if (!gercek && w.length >= 4 && !gercekKokVar(w)) {
     for (let i = 0; i <= w.length; i++) {
       if (i < w.length && YAKIN.has(hs(w.slice(0, i) + w.slice(i + 1)))) return "yakin";
       for (const c of ABC) {
